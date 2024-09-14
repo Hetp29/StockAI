@@ -5,7 +5,7 @@ import pandas as pd
 def fetch_sp500_tickers():
     sp500_tickers_url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
     
-    tickers_df = pd.read_html(sp500_tickers_url)[0]
+    tickers_df = pd.read_html(sp500_tickers_url)[0] #only the first table of the DataFrame
     tickers = tickers_df['Symbol'].tolist()
     
     #save tickers to csv file for later use
