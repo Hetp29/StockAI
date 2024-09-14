@@ -66,3 +66,6 @@ else:
 
 #buy signal when spread is below mean, you expect the prices to come back 
 #sell signal when spread is above mean, you expect the prices to come back
+
+#ADF test (augmented dickey-fuller test) is statistical test used to determine whether time series is
+#stationary (meaning its values do not depend on time)
