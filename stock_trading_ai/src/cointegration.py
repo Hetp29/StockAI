@@ -1,37 +1,47 @@
-#linear regression to determine cointegration 
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from statsmodels.tsa.stattools import adfuller
-
-data = pd.read_csv('../data/ko_pep_data.csv', index_col='Date', parse_dates=True)
-
-x = data['PEP'].values.reshape(-1, 1)
-y = data['KO'].values
-
-model = LinearRegression()
-model.fit(x, y)
-
-spread = data['KO'] - model.predict(x)
-
-adf_result = adfuller(spread)
-
-print(f"ADF Test Statistic: {adf_result[0]}")
-print(f"p-value: {adf_result[1]}")
-
-plt.figure(figsize=(10, 6))
-plt.plot(spread, label='Price Spread (KO - PEP)')
-plt.axhline(spread.mean(), color='red', linestyle='--', label='Mean Spread')
-plt.title("Price Spread Between KO and PEP")
-plt.legend()
-plt.show()
-
-if adf_result[1] < 0.05:
-    print("KO and PEP are cointegrated (p < 0.05, spread is stationary)")
-else:
-    print("KO and PEP are not cointegrated (p >= 0.05, spread is not stationary)")
+import statsmodels.api as sm #type-ignore
+from statsmodels.tsa.stattools import coint #type-ignore
+import itertools
+import os
+def load_stock_data(tickers):
+    stock_data = {}
+    for ticker in tickers:
+        try:
+            data = pd.read_csv(f'../data/stock_data/{ticker}.csv', index_cols='Date', parse_dates=True)
+            stock_data[ticker] = data['Close'] #close price for integration
+            #a stock's closing price is price at which stock trades at end, most recent valuation of security until next trading session begins
+        except Exception as e:
+            print(f"Error loading data for {ticker}: {e}")
     
+    return stock_data
+
+def test_cointegration(stock1, stock2):
+    score, p_value, _ = coint(stock1, stock2)
+    return p_value
+
+def find_cointegrated_pairs(tickers, threshold=0.05):
+    stock_data = load_stock_data(tickers)
+    cointegrated_pairs = []
+    
+    for ticker1, ticker2 in itertools.combinations(stock_data.keys(), 2):
+        try:
+            p_value = test_cointegration(stock_data[ticker1], stock_data[ticker2])
+            if p_value < threshold:
+                cointegrated_pairs.append((ticker1, ticker2, p_value))
+                print(f"Cointegrated pair found: {ticker1} ad {ticker2} with p-value {p_value}")
+        
+        except Exception as e:
+            print(f"Error testing pair {ticker1} and {ticker2}: {e}")
+            
+    if cointegrated_pairs:
+        pd.DataFrame(cointegrated_pairs, columns=["Ticker1", "Ticker2", "p-value"]).to_csv('../data/cointegrated_pairs.csv', index=False)
+        print(f"Saved {len(cointegrated_pairs)} cointegrated pairs.")
+    else:
+        print("No cointegrated pairs found.")
+if __name__ == "__main__":
+    tickers = pd.read_csv('../data/sp500_tickers.csv')['Ticker'].tolist()[:495]
+    find_cointegrated_pairs
+
 #Blue line is the difference between KO's actual price and predicted prices based on PEP's prices. 
 #How much KO is "overvalued" or "undervalued" compared to PEP based on their relationship
 
